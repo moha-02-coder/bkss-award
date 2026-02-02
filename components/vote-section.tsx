@@ -25,7 +25,7 @@ export function VoteSection({
   leadershipRevealed,
 }: VoteSectionProps) {
   const { votes, refetch: refetchVotes } = useVotes()
-  const [selectedCandidates, setSelectedCandidates] = useState<Record<string, string>>({})
+  const [selectedCandidates, setSelectedCandidates] = useState<Record<string, { id: string; name: string }>>({})
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   const [selectedProfile, setSelectedProfile] = useState<{ candidate: Candidate; categoryId: string } | null>(null)
@@ -64,19 +64,10 @@ export function VoteSection({
     return votes.find((v) => v.userId === currentUser.id && v.categoryId === categoryId)
   }
 
-  const handleVote = async (categoryId: string, candidateName?: string) => {
-    const finalCandidateName = candidateName || selectedCandidates[categoryId]
-    
-    console.log("handleVote appelé:", {
-      categoryId,
-      candidateName,
-      finalCandidateName,
-      currentUser: currentUser?.id,
-      hasVoted: hasUserVotedInCategory(categoryId)
-    })
-    
-    if (!finalCandidateName || hasUserVotedInCategory(categoryId)) {
-      console.log("Vote bloqué - finalCandidateName:", finalCandidateName, "hasVoted:", hasUserVotedInCategory(categoryId))
+  const handleVote = async (categoryId: string, candidate?: { id: string; name: string }) => {
+    const finalCandidate = candidate || selectedCandidates[categoryId]
+
+    if (!finalCandidate || hasUserVotedInCategory(categoryId)) {
       return
     }
 
@@ -84,25 +75,21 @@ export function VoteSection({
       const voteData = {
         userId: currentUser.id,
         categoryId,
-        candidateName: finalCandidateName,
+        candidateId: finalCandidate.id,
+        candidateName: finalCandidate.name,
       }
-      
-      console.log("Envoi du vote:", voteData)
-      
+
       const response = await fetch('/api/votes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(voteData)
       })
 
-      console.log("Réponse API:", response.status, response.statusText)
-
       if (response.ok) {
         // Recharger les votes pour voir le nouveau vote
         await refetchVotes()
         setShowConfirmation(true)
         setTimeout(() => setShowConfirmation(false), 2000)
-        console.log("Vote réussi!")
       } else {
         const error = await response.json()
         console.error("Erreur lors du vote:", error)
@@ -217,7 +204,7 @@ export function VoteSection({
                       <div className="p-4 sm:p-6 pt-0 border-t border-border/50">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                           {category.candidates.map((candidate) => {
-                            const isSelected = selectedCandidates[category.id] === candidate.name
+                            const isSelected = selectedCandidates[category.id]?.id === candidate.id
                             const isVotedFor = userVote?.candidateName === candidate.name
 
                             return (
@@ -265,28 +252,33 @@ export function VoteSection({
                                       artistName={candidate.name}
                                     />
                                   )}
-                                  
-                                  {!hasVoted ? (
-                                    <Button
-                                      variant={isSelected ? "default" : "outline"}
-                                      size="sm"
-                                      className={`w-full ${isSelected ? "bg-primary text-primary-foreground" : ""}`}
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setSelectedCandidates((prev) => ({
-                                          ...prev,
-                                          [category.id]: candidate.name,
-                                        }))
-                                      }}
-                                    >
-                                      {isSelected ? <Check className="w-4 h-4 mr-1" /> : null}
-                                      {isSelected ? "Sélectionné" : "Sélectionner"}
-                                    </Button>
-                                  ) : isVotedFor ? (
-                                    <span className="flex items-center justify-center gap-1 text-sm text-emerald-500 font-medium">
-                                      <Check className="w-4 h-4" /> Votre vote
-                                    </span>
-                                  ) : null}
+                                  <Button
+                                    type="button"
+                                    variant={isSelected ? "default" : "outline"}
+                                    className={`w-full ${isSelected ? "bg-primary text-primary-foreground" : ""}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedCandidates((prev) => ({
+                                        ...prev,
+                                        [category.id]: { id: candidate.id, name: candidate.name },
+                                      }))
+                                    }}
+                                    disabled={hasVoted}
+                                  >
+                                    {isVotedFor ? (
+                                      <span className="flex items-center gap-2">
+                                        <Check className="w-4 h-4" />
+                                        Voté
+                                      </span>
+                                    ) : isSelected ? (
+                                      <span className="flex items-center gap-2">
+                                        <Check className="w-4 h-4" />
+                                        Sélectionné
+                                      </span>
+                                    ) : (
+                                      "Sélectionner"
+                                    )}
+                                  </Button>
                                 </div>
                               </motion.div>
                             )
@@ -295,11 +287,11 @@ export function VoteSection({
 
                         {!hasVoted && selectedCandidates[category.id] && (
                           <Button
-                            onClick={() => handleVote(category.id)}
+                            onClick={() => handleVote(category.id, selectedCandidates[category.id])}
                             className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground"
                           >
                             <VoteIcon className="w-4 h-4 mr-2" />
-                            Confirmer le vote pour {selectedCandidates[category.id]}
+                            Confirmer le vote pour {selectedCandidates[category.id].name}
                           </Button>
                         )}
                       </div>
@@ -468,7 +460,7 @@ export function VoteSection({
                 {!hasUserVotedInCategory(selectedProfile.categoryId) && (
                   <Button
                     onClick={() => {
-                      handleVote(selectedProfile.categoryId, selectedProfile.candidate.name)
+                      handleVote(selectedProfile.categoryId, { id: selectedProfile.candidate.id, name: selectedProfile.candidate.name })
                       setSelectedProfile(null)
                     }}
                     className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground"

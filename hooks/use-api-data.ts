@@ -265,7 +265,16 @@ export function useVotes() {
       const response = await fetch('/api/votes')
       if (!response.ok) throw new Error('Erreur lors de la récupération des votes')
       const data = await response.json()
-      setVotes(data)
+      const transformedVotes: Vote[] = (data || []).map((v: any) => ({
+        id: v.id,
+        userId: v.userId ?? v.user_id,
+        categoryId: v.categoryId ?? v.category_id,
+        candidateId: v.candidateId ?? v.candidate_id,
+        candidateName: v.candidateName ?? v.candidate_name ?? v.candidate?.name ?? '',
+        timestamp: v.timestamp,
+      }))
+
+      setVotes(transformedVotes)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
     } finally {

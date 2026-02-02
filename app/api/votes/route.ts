@@ -28,10 +28,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, categoryId, candidateName } = body
+    const { userId, categoryId, candidateId, candidateName } = body
 
     // Validation
-    if (!userId || !categoryId || !candidateName) {
+    if (!userId || !categoryId || !candidateId || !candidateName) {
       return NextResponse.json({ error: 'Tous les champs sont requis' }, { status: 400 })
     }
 
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         category_id: categoryId,
+        candidate_id: candidateId,
         candidate_name: candidateName,
         timestamp: Date.now()
       })
