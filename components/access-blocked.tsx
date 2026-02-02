@@ -6,19 +6,24 @@ import { Lock, Shield, AlertCircle, Eye, EyeOff, Key, Mail, Phone } from "lucide
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ACCESS_CONFIG, validateActivationCode, unlockAccess } from "@/lib/access-control"
+import { ACCESS_CONFIG, validateActivationCode, unlockGlobalAccess, isDeadlinePassed } from "@/lib/access-control"
 
 export function AccessBlocked() {
   const [activationCode, setActivationCode] = useState("")
   const [showCode, setShowCode] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isUnlocked, setIsUnlocked] = useState(false)
+  
+  // Calculer les jours restants avant la date limite
+  const daysRemaining = ACCESS_CONFIG.deadline ? 
+    Math.ceil((ACCESS_CONFIG.deadline.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 
+    null
 
   const handleActivation = () => {
     if (validateActivationCode(activationCode)) {
       setMessage({ type: "success", text: "Accès débloqué avec succès !" })
       setIsUnlocked(true)
-      unlockAccess() // Débloquer l'accès localement
+      unlockGlobalAccess() // Débloquer l'accès globalement pour tous
       setTimeout(() => {
         window.location.reload()
       }, 2000)
@@ -62,6 +67,20 @@ export function AccessBlocked() {
             </div>
             <h1 className="text-2xl font-bold mb-2">{ACCESS_CONFIG.blockMessage}</h1>
             <p className="text-muted-foreground text-sm">{ACCESS_CONFIG.blockDetails}</p>
+            
+            {/* Date limite */}
+            {ACCESS_CONFIG.deadline && daysRemaining !== null && (
+              <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {daysRemaining > 0 ? 
+                    `⏰ ${daysRemaining} jour(s) restant(s) avant le ${ACCESS_CONFIG.deadline.toLocaleDateString('fr-FR')}` :
+                    daysRemaining === 0 ?
+                    "📅 Dernier jour avant la date limite !" :
+                    "⚠️ Date limite dépassée"
+                  }
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Message d'erreur/succès */}
