@@ -20,8 +20,27 @@ export function UserProfile({ user, onClose, onUpdate }: UserProfileProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [editedUser, setEditedUser] = useState<UserType>(user)
+  const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
+  // Options pour le domaine
+  const domainOptions = [
+    "Musique",
+    "Audiovisuel", 
+    "Journalisme",
+    "Marketing",
+    "Communication",
+    "Production",
+    "Événementiel",
+    "Art",
+    "Culture",
+    "Sport",
+    "Éducation",
+    "Technologie",
+    "Autre"
+  ]
 
   // Calculer les statistiques de l'utilisateur
   const userVotes = votes.filter(vote => vote.userId === user.id)
@@ -35,6 +54,42 @@ export function UserProfile({ user, onClose, onUpdate }: UserProfileProps) {
 
   const handleSave = async () => {
     try {
+      setMessage(null)
+      
+      // Vérifier l'ancien mot de passe si un nouveau mot de passe est fourni
+      if (newPassword) {
+        if (!oldPassword) {
+          setMessage({ type: "error", text: "Veuillez saisir votre ancien mot de passe" })
+          return
+        }
+        
+        // Vérifier l'ancien mot de passe via l'API
+        const verifyResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            email: user.email, 
+            password: oldPassword 
+          })
+        })
+        
+        if (!verifyResponse.ok) {
+          setMessage({ type: "error", text: "Ancien mot de passe incorrect" })
+          return
+        }
+        
+        // Vérifier la confirmation du nouveau mot de passe
+        if (newPassword !== confirmPassword) {
+          setMessage({ type: "error", text: "Les nouveaux mots de passe ne correspondent pas" })
+          return
+        }
+        
+        if (newPassword.length < 4) {
+          setMessage({ type: "error", text: "Le nouveau mot de passe doit contenir au moins 4 caractères" })
+          return
+        }
+      }
+      
       const updateData: any = { ...editedUser }
       delete updateData.id // Supprimer l'ID dupliqué
       
@@ -53,7 +108,9 @@ export function UserProfile({ user, onClose, onUpdate }: UserProfileProps) {
         const updatedUser = await response.json()
         onUpdate?.(updatedUser)
         setIsEditing(false)
-        setNewPassword('') // Réinitialiser le mot de passe
+        setOldPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
         setMessage({ type: "success", text: "Profil mis à jour avec succès !" })
         setTimeout(() => setMessage(null), 3000)
       } else {
@@ -68,6 +125,10 @@ export function UserProfile({ user, onClose, onUpdate }: UserProfileProps) {
   const handleCancel = () => {
     setEditedUser(user)
     setIsEditing(false)
+    setOldPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setMessage(null)
   }
 
   return (
@@ -201,11 +262,18 @@ export function UserProfile({ user, onClose, onUpdate }: UserProfileProps) {
               <div>
                 <Label>Domaine</Label>
                 {isEditing ? (
-                  <Input
+                  <select
                     value={editedUser.domain || ''}
                     onChange={(e) => setEditedUser({ ...editedUser, domain: e.target.value })}
-                    placeholder="Votre domaine d'activité"
-                  />
+                    className="w-full p-2 rounded-lg border border-border/50 bg-background"
+                  >
+                    <option value="">Sélectionnez un domaine</option>
+                    {domainOptions.map((domain) => (
+                      <option key={domain} value={domain}>
+                        {domain}
+                      </option>
+                    ))}
+                  </select>
                 ) : (
                   <p className="text-muted-foreground">{user.domain || 'Non renseigné'}</p>
                 )}
@@ -230,22 +298,43 @@ export function UserProfile({ user, onClose, onUpdate }: UserProfileProps) {
               <div>
                 <Label>Mot de passe</Label>
                 {isEditing ? (
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Nouveau mot de passe (laisser vide pour ne pas changer)"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        placeholder="Ancien mot de passe (requis pour changer)"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Nouveau mot de passe (optionnel)"
+                      />
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirmer le nouveau mot de passe"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Laissez les champs de nouveau mot de passe vides pour ne pas le modifier
+                    </p>
                   </div>
                 ) : (
                   <p className="text-muted-foreground">••••••••</p>
