@@ -90,9 +90,7 @@ export default function BankassAwards() {
           {currentPage === "auth" && (
             <AuthSection
               setCurrentPage={setCurrentPage}
-              setCurrentUser={login}
-              users={users}
-              setUsers={() => {}} // Les users sont gérés par le hook
+              setCurrentUser={(user) => user && login(user)}
             />
           )}
           {currentPage === "vote" && (

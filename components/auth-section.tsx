@@ -14,14 +14,12 @@ import type { User } from "@/hooks/use-api-data"
 interface AuthSectionProps {
   setCurrentPage: (page: Page) => void
   setCurrentUser: (user: User | null) => void
-  users: User[]
-  setUsers: (users: User[]) => void
 }
 
 const SUPER_ADMIN_EMAIL = "admin@bankassawards.com"
 const SUPER_ADMIN_PASSWORD = "admin2024"
 
-export function AuthSection({ setCurrentPage, setCurrentUser, users, setUsers }: AuthSectionProps) {
+export function AuthSection({ setCurrentPage, setCurrentUser }: AuthSectionProps) {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login")
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -103,13 +101,13 @@ export function AuthSection({ setCurrentPage, setCurrentUser, users, setUsers }:
     setIsLoading(true)
     setMessage(null)
 
-    await new Promise((r) => setTimeout(r, 500))
-
-    if (users.find((u) => u.email === signupEmail)) {
-      setMessage({ type: "error", text: "Cet email est déjà utilisé" })
+    if (!signupName || !signupEmail || !signupPassword) {
+      setMessage({ type: "error", text: "Veuillez remplir tous les champs obligatoires" })
       setIsLoading(false)
       return
     }
+
+    await new Promise((r) => setTimeout(r, 500))
 
     if (signupEmail === SUPER_ADMIN_EMAIL) {
       setMessage({ type: "error", text: "Cet email est réservé" })
@@ -117,24 +115,42 @@ export function AuthSection({ setCurrentPage, setCurrentUser, users, setUsers }:
       return
     }
 
-    const newUser: User & { password: string } = {
-      id: Date.now().toString(),
-      name: signupName,
-      email: signupEmail,
-      password: signupPassword,
-      domain: signupDomain,
-      city: signupCity,
-      phone: signupPhone,
-      role: "VOTER",
-      createdAt: new Date().toISOString(),
-    }
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: signupName,
+          email: signupEmail,
+          password: signupPassword,
+          domain: signupDomain,
+          city: signupCity,
+          phone: signupPhone,
+          role: "VOTER",
+        })
+      })
 
-    setUsers([...users, newUser as User])
-    setMessage({ type: "success", text: "Inscription réussie ! Vous pouvez maintenant vous connecter." })
-    setTimeout(() => {
-      setActiveTab("login")
-      setLoginEmail(signupEmail)
-    }, 1500)
+      if (response.ok) {
+        setMessage({ type: "success", text: "Inscription réussie ! Vous pouvez maintenant vous connecter." })
+        setTimeout(() => {
+          setActiveTab("login")
+          setLoginEmail(signupEmail)
+        }, 1500)
+
+        // Réinitialiser le formulaire
+        setSignupName("")
+        setSignupEmail("")
+        setSignupPassword("")
+        setSignupDomain("")
+        setSignupCity("")
+        setSignupPhone("")
+      } else {
+        const error = await response.json()
+        setMessage({ type: "error", text: error.error || "Erreur lors de l'inscription" })
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: "Erreur lors de l'inscription" })
+    }
 
     setIsLoading(false)
   }
@@ -142,7 +158,12 @@ export function AuthSection({ setCurrentPage, setCurrentUser, users, setUsers }:
   if (showPasswordRecovery) {
     return (
       <section className="min-h-[calc(100vh-5rem)] flex items-center justify-center py-12 px-4">
-        <PasswordRecovery users={users} setUsers={setUsers} onBack={() => setShowPasswordRecovery(false)} />
+        <div className="text-center">
+          <p className="text-muted-foreground">Récupération de mot de passe temporairement désactivée</p>
+          <Button onClick={() => setShowPasswordRecovery(false)} className="mt-4">
+            Retour
+          </Button>
+        </div>
       </section>
     )
   }
