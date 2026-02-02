@@ -67,7 +67,13 @@ export function VoteSection({
   const handleVote = async (categoryId: string, candidate?: { id: string; name: string }) => {
     const finalCandidate = candidate || selectedCandidates[categoryId]
 
-    if (!finalCandidate || hasUserVotedInCategory(categoryId)) {
+    if (!finalCandidate) {
+      alert("Veuillez d'abord sélectionner un candidat")
+      return
+    }
+
+    if (hasUserVotedInCategory(categoryId)) {
+      alert("❌ Vote déjà confirmé !\n\nVous avez déjà voté dans cette catégorie. Il est impossible de voter plusieurs fois dans la même catégorie.")
       return
     }
 
@@ -178,8 +184,9 @@ export function VoteSection({
 
                   <div className="flex items-center gap-3">
                     {hasVoted && (
-                      <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-sm font-medium">
-                        Voté
+                      <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-sm font-medium flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        Vote confirmé
                       </span>
                     )}
                     {isLeadershipPrize && (
@@ -297,6 +304,24 @@ export function VoteSection({
                             <VoteIcon className="w-4 h-4 mr-2" />
                             Confirmer le vote pour {selectedCandidates[category.id].name}
                           </Button>
+                        )}
+
+                        {/* Message pour vote déjà effectué */}
+                        {hasVoted && userVote && (
+                          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                            <div className="flex items-center gap-3 text-emerald-500">
+                              <Check className="w-5 h-5" />
+                              <div>
+                                <p className="font-medium">Vote déjà confirmé</p>
+                                <p className="text-sm opacity-90">
+                                  Vous avez voté pour <span className="font-semibold">{userVote.candidateName}</span>
+                                </p>
+                                <p className="text-xs opacity-75 mt-1">
+                                  Il est impossible de modifier votre vote ou de voter à nouveau dans cette catégorie.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </motion.div>
@@ -476,12 +501,20 @@ export function VoteSection({
                 
                 {/* Already Voted Message */}
                 {hasUserVotedInCategory(selectedProfile.categoryId) && (
-                  <div className="w-full p-3 rounded-lg bg-muted/30 border border-muted/50">
-                    <p className="text-center text-muted-foreground text-sm">
-                      {getUserVoteInCategory(selectedProfile.categoryId)?.candidateName === selectedProfile.candidate.name 
-                        ? "Vous avez déjà voté pour ce candidat" 
-                        : "Vous avez déjà voté dans cette catégorie"}
-                    </p>
+                  <div className="w-full p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="flex items-center gap-3 text-emerald-500">
+                      <Check className="w-5 h-5" />
+                      <div className="text-center flex-1">
+                        <p className="font-medium text-sm">
+                          {getUserVoteInCategory(selectedProfile.categoryId)?.candidateName === selectedProfile.candidate.name 
+                            ? "✅ Vous avez voté pour ce candidat" 
+                            : "❌ Vote déjà confirmé dans cette catégorie"}
+                        </p>
+                        <p className="text-xs opacity-75 mt-1">
+                          Il est impossible de voter plusieurs fois dans la même catégorie
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
                 
