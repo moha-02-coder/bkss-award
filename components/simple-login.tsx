@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Phone, Lock, Eye, EyeOff, Shield, CheckCircle, AlertCircle, Loader2, Mail } from "lucide-react"
+import { Phone, Lock, Eye, EyeOff, Shield, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,13 +16,7 @@ interface SimpleLoginProps {
 
 export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
   const [formData, setFormData] = useState({
-    phone: "",
-    password: ""
-  })
-  
-  const [isAdminMode, setIsAdminMode] = useState(false)
-  const [adminData, setAdminData] = useState({
-    email: "",
+    identifier: "", // Peut être email ou téléphone
     password: ""
   })
   
@@ -41,66 +35,44 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
     return undefined
   }
 
-  const handleInputChange = (field: string, value: string) => {
-    if (isAdminMode) {
-      setAdminData(prev => ({ ...prev, [field]: value }))
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }))
+  // Détecter si l'identifiant est un email ou un téléphone
+  const detectIdentifierType = (identifier: string): "email" | "phone" => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const phoneRegex = /^(\+223|223|0)?[0-9]{8}$/
+    
+    if (emailRegex.test(identifier)) {
+      return "email"
+    } else if (phoneRegex.test(identifier.replace(/\D/g, ''))) {
+      return "phone"
     }
-    setMessage(null)
+    
+    // Par défaut, considérer comme téléphone si ça ressemble à un numéro
+    return identifier.replace(/\D/g, '').length >= 8 ? "phone" : "email"
   }
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setMessage(null)
-
-    try {
-      // Connexion admin via API
-      const response = await fetch('/api/auth/admin-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: adminData.email,
-          password: adminData.password
-        })
-      })
-
-      if (response.ok) {
-        const { user } = await response.json()
-        
-        // Enregistrer la connexion admin
-        recordUserConnection(user, getClientIP(), navigator.userAgent)
-        
-        // Stocker la session admin
-        localStorage.setItem('user', JSON.stringify(user))
-        localStorage.setItem('isLoggedIn', 'true')
-        localStorage.setItem('isAdmin', 'true')
-        
-        setMessage({
-          type: "success",
-          text: "Connexion administrateur réussie ! Redirection..."
-        })
-        
-        setTimeout(() => {
-          onSuccess(user)
-        }, 1500)
-        
-      } else {
-        const error = await response.json()
-        setMessage({
-          type: "error",
-          text: error.error || "Identifiants administrateur incorrects"
-        })
+  // Normaliser l'identifiant selon son type
+  const normalizeIdentifier = (identifier: string): string => {
+    const type = detectIdentifierType(identifier)
+    
+    if (type === "email") {
+      return identifier.toLowerCase().trim()
+    } else {
+      // Normaliser le numéro de téléphone malien
+      const digits = identifier.replace(/\D/g, '')
+      if (digits.startsWith('223')) {
+        return `+${digits}`
+      } else if (digits.startsWith('0')) {
+        return `+223${digits.slice(1)}`
+      } else if (digits.length === 8) {
+        return `+223${digits}`
       }
-    } catch (error) {
-      setMessage({
-        type: "error",
-        text: "Erreur de connexion admin. Veuillez réessayer."
-      })
+      return `+223${digits}`
     }
+  }
 
-    setIsSubmitting(false)
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    setMessage(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,16 +90,16 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
     setMessage(null)
 
     try {
-      // Normaliser le numéro de téléphone
-      const normalizedPhone = formData.phone.replace(/\D/g, '')
-      const formattedPhone = normalizedPhone.startsWith('223') ? `+${normalizedPhone}` : `+223${normalizedPhone}`
-
-      // Tenter la connexion
+      // Normaliser l'identifiant
+      const normalizedIdentifier = normalizeIdentifier(formData.identifier)
+      const identifierType = detectIdentifierType(formData.identifier)
+      
+      // Tenter la connexion selon le type d'identifiant
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: formattedPhone,
+          [identifierType]: normalizedIdentifier,
           password: formData.password
         })
       })
@@ -145,7 +117,7 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
         
         setMessage({
           type: "success",
-          text: "Connexion réussie ! Redirection en cours..."
+          text: `Connexion réussie via ${identifierType === "email" ? "l'email" : "le téléphone"} ! Redirection en cours...`
         })
         
         // Réinitialiser les tentatives
@@ -221,41 +193,10 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
           <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
             <Shield className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">
-            {isAdminMode ? "Connexion Administrateur" : "Connexion Sécurisée"}
-          </h2>
+          <h2 className="text-2xl font-bold mb-2">Connexion Sécurisée</h2>
           <p className="text-muted-foreground text-sm">
-            {isAdminMode 
-              ? "Accédez à votre espace d'administration"
-              : "Accédez à votre espace avec votre numéro de téléphone"
-            }
+            Accédez à votre compte avec votre email ou votre numéro de téléphone
           </p>
-        </div>
-
-        {/* Toggle Admin/User */}
-        <div className="mb-6 flex items-center justify-center">
-          <div className="bg-muted/50 rounded-lg p-1 flex">
-            <button
-              onClick={() => setIsAdminMode(false)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                !isAdminMode
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Utilisateur
-            </button>
-            <button
-              onClick={() => setIsAdminMode(true)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                isAdminMode
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Administrateur
-            </button>
-          </div>
         </div>
 
         {/* Alertes de sécurité */}
@@ -273,105 +214,64 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
         )}
 
         {/* Formulaire */}
-        <form onSubmit={isAdminMode ? handleAdminLogin : handleSubmit} className="space-y-6">
-          {isAdminMode ? (
-            // Formulaire Admin
-            <>
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="admin-email">Email administrateur</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="admin-email"
-                    type="email"
-                    value={adminData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    placeholder="admin@bankassawards.com"
-                    className="pl-11 h-12"
-                    required
-                    disabled={isSubmitting}
-                  />
-                </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Email ou Téléphone */}
+          <div className="space-y-2">
+            <Label htmlFor="identifier">Email ou Téléphone</Label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground flex items-center justify-center">
+                {detectIdentifierType(formData.identifier) === "email" ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                ) : (
+                  <Phone className="w-5 h-5" />
+                )}
               </div>
+              <Input
+                id="identifier"
+                type="text"
+                value={formData.identifier}
+                onChange={(e) => handleInputChange("identifier", e.target.value)}
+                placeholder={detectIdentifierType(formData.identifier) === "email" ? "votre@email.com" : "+223 XX XX XX XX"}
+                className="pl-11 h-12"
+                required
+                disabled={isSubmitting || isBlocked}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {detectIdentifierType(formData.identifier) === "email" 
+                ? "Format email valide requis" 
+                : "Numéro malien valide requis"
+              }
+            </p>
+          </div>
 
-              {/* Mot de passe */}
-              <div className="space-y-2">
-                <Label htmlFor="admin-password">Mot de passe</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="admin-password"
-                    type={showPassword ? "text" : "password"}
-                    value={adminData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    placeholder="Mot de passe administrateur"
-                    className="pl-11 pr-11 h-12"
-                    required
-                    disabled={isSubmitting}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    disabled={isSubmitting}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            // Formulaire Utilisateur
-            <>
-              {/* Téléphone */}
-              <div className="space-y-2">
-                <Label htmlFor="phone">Numéro de téléphone</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    placeholder="+223 XX XX XX XX"
-                    className="pl-11 h-12"
-                    required
-                    disabled={isSubmitting || isBlocked}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Numéro malien valide requis
-                </p>
-              </div>
-
-              {/* Mot de passe */}
-              <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    placeholder="Votre mot de passe"
-                    className="pl-11 pr-11 h-12"
-                    required
-                    disabled={isSubmitting || isBlocked}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    disabled={isSubmitting || isBlocked}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
+          {/* Mot de passe */}
+          <div className="space-y-2">
+            <Label htmlFor="password">Mot de passe</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={(e) => handleInputChange("password", e.target.value)}
+                placeholder="Votre mot de passe"
+                className="pl-11 pr-11 h-12"
+                required
+                disabled={isSubmitting || isBlocked}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                disabled={isSubmitting || isBlocked}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
 
           {/* Message */}
           {message && (
@@ -393,17 +293,17 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
           <Button
             type="submit"
             className="w-full h-12 bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg"
-            disabled={isSubmitting || isBlocked || (!isAdminMode && (!formData.phone || !formData.password)) || (isAdminMode && (!adminData.email || !adminData.password))}
+            disabled={isSubmitting || isBlocked || !formData.identifier || !formData.password}
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {isAdminMode ? "Connexion admin..." : "Connexion en cours..."}
+                Connexion en cours...
               </>
             ) : isBlocked ? (
               `Bloqué (${formatTime(blockTimeLeft)})`
             ) : (
-              isAdminMode ? "Se connecter en tant qu'admin" : "Se connecter"
+              "Se connecter"
             )}
           </Button>
         </form>
@@ -414,10 +314,10 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
             🔐 Sécurité de connexion
           </h4>
           <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+            <li>• Connexion par email ou téléphone</li>
             <li>• Protection contre les tentatives multiples</li>
             <li>• Blocage automatique après 3 échecs</li>
             <li>• Traçabilité des connexions</li>
-            <li>• Un seul compte par numéro de téléphone</li>
           </ul>
         </div>
 

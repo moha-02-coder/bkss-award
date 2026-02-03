@@ -4,28 +4,54 @@ import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { email, phone, password } = await request.json()
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email et mot de passe requis' }, { status: 400 })
+    if (!password) {
+      return NextResponse.json({ error: 'Mot de passe requis' }, { status: 400 })
+    }
+
+    if (!email && !phone) {
+      return NextResponse.json({ error: 'Email ou numéro de téléphone requis' }, { status: 400 })
+    }
+
+    // Déterminer le champ de recherche
+    let searchField: string
+    let searchValue: string
+
+    if (email) {
+      searchField = 'email'
+      searchValue = email.toLowerCase().trim()
+    } else {
+      searchField = 'phone'
+      searchValue = phone
     }
 
     // Récupérer l'utilisateur depuis la base de données
     const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq(searchField, searchValue)
       .single()
 
     if (error || !user) {
-      return NextResponse.json({ error: 'Email ou mot de passe incorrect' }, { status: 401 })
+      const identifier = email || phone
+      return NextResponse.json({ 
+        error: email 
+          ? 'Email ou mot de passe incorrect' 
+          : 'Numéro de téléphone ou mot de passe incorrect'
+      }, { status: 401 })
     }
 
     // Vérifier le mot de passe
     if (user.password) {
       const isValidPassword = await bcrypt.compare(password, user.password)
       if (!isValidPassword) {
-        return NextResponse.json({ error: 'Email ou mot de passe incorrect' }, { status: 401 })
+        const identifier = email || phone
+        return NextResponse.json({ 
+          error: email 
+            ? 'Email ou mot de passe incorrect' 
+            : 'Numéro de téléphone ou mot de passe incorrect'
+        }, { status: 401 })
       }
     }
 
