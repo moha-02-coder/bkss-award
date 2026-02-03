@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { Page, User, Vote as VoteType } from "@/app/page"
+import type { Page, User, Vote as VoteType } from "@/types"
 import type { Category } from "@/lib/categories"
 
 interface ProfileSectionProps {
@@ -85,7 +85,7 @@ export function ProfileSection({
   const userVotes = votes.filter((v) => v.userId === currentUser.id)
   const votedCategories = userVotes.length
   const totalCategories = categories.filter((c) => !c.isLeadershipPrize).length
-  const isSuperAdmin = currentUser.role === "super_admin"
+  const isSuperAdmin = currentUser.role === "SUPER_ADMIN"
 
   const getInitials = (name: string) => {
     return name

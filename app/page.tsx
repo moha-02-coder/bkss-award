@@ -147,7 +147,7 @@ export default function BankassAwards() {
         >
           {currentPage === "home" && (
             <HeroSection 
-              setCurrentPage={setCurrentPage} 
+              setCurrentPage={(page) => setCurrentPage(page as Page)} 
               currentUser={currentUser} 
               categories={categories}
               votes={votes}
@@ -156,14 +156,14 @@ export default function BankassAwards() {
           )}
           {currentPage === "auth" && (
             <AuthSection
-              setCurrentPage={setCurrentPage}
+              setCurrentPage={(page) => setCurrentPage(page as Page)}
               setCurrentUser={(user) => user && login(user)}
             />
           )}
           {currentPage === "vote" && (
             <VoteSection
               currentUser={currentUser}
-              setCurrentPage={setCurrentPage}
+              setCurrentPage={(page) => setCurrentPage(page as Page)}
               categories={categories}
               leadershipRevealed={leadershipRevealed}
             />

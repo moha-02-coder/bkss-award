@@ -7,7 +7,7 @@ import { Mail, Lock, ArrowLeft, Check, AlertCircle, Key, Eye, EyeOff } from "luc
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { User } from "@/app/page"
+import type { User } from "@/types"
 
 interface PasswordRecoveryProps {
   users: User[]

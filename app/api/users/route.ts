@@ -73,12 +73,15 @@ export async function POST(request: NextRequest) {
       hashedPassword = await bcrypt.hash(password, 10)
     }
 
+    // Générer un email fictif si aucun email n'est fourni (pour les comptes téléphone uniquement)
+    const finalEmail = email || `user_${Date.now()}@bankassawards.local`
+    
     // Créer l'utilisateur
     const { data, error } = await supabaseAdmin
       .from('users')
       .insert({
         name,
-        email: email || null, // Email optionnel pour les nouveaux comptes
+        email: finalEmail, // Email toujours non nul
         phone: phone || null, // Téléphone optionnel pour les anciens comptes
         password: hashedPassword,
         role,

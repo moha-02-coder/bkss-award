@@ -172,6 +172,7 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.fullName,
+          email: `user_${Date.now()}@bankassawards.local`, // Email généré pour éviter null
           phone: formData.phone,
           password: generatedPassword,
           domain: formData.domain,
@@ -243,6 +244,7 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.fullName,
+          email: `user_${Date.now()}@bankassawards.local`, // Email généré pour éviter null
           phone: formData.phone,
           password: generatedPassword,
           domain: formData.domain,
