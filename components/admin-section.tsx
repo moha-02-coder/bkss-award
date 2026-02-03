@@ -60,7 +60,7 @@ export function AdminSection({
   } | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [showAddUser, setShowAddUser] = useState(false)
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "" })
+  const [newUser, setNewUser] = useState({ name: "", phone: "", password: "" })
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [editingLeadership, setEditingLeadership] = useState(false)
@@ -88,7 +88,7 @@ export function AdminSection({
   const totalCandidates = categories.reduce((acc, cat) => acc + cat.candidates.length, 0)
 
   const handleAddUser = async () => {
-    if (!newUser.name || !newUser.email || !newUser.password) {
+    if (!newUser.name || !newUser.phone || !newUser.password) {
       setMessage({ type: "error", text: "Veuillez remplir tous les champs" })
       setTimeout(() => setMessage(null), 3000)
       return
@@ -96,15 +96,14 @@ export function AdminSection({
     
     try {
       await createUser(newUser as any)
-      setNewUser({ name: "", email: "", password: "" })
+      setNewUser({ name: "", phone: "", password: "" })
       setShowAddUser(false)
       // Recharger les données pour voir le nouvel utilisateur
       await refetchUsers()
-      setMessage({ type: "success", text: "Utilisateur créé avec succès !" })
+      setMessage({ type: "success", text: "Utilisateur ajouté avec succès" })
       setTimeout(() => setMessage(null), 3000)
     } catch (error) {
-      console.error("Erreur lors de la création de l'utilisateur:", error)
-      setMessage({ type: "error", text: "Erreur lors de la création de l'utilisateur" })
+      setMessage({ type: "error", text: "Erreur lors de l'ajout de l'utilisateur" })
       setTimeout(() => setMessage(null), 3000)
     }
   }
@@ -443,12 +442,12 @@ export function AdminSection({
                         />
                       </div>
                       <div>
-                        <Label>Email</Label>
+                        <Label>Numéro de téléphone</Label>
                         <Input
-                          type="email"
-                          value={newUser.email}
-                          onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                          placeholder="email@example.com"
+                          type="tel"
+                          value={newUser.phone}
+                          onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                          placeholder="+223 XX XX XX XX"
                         />
                       </div>
                       <div>
@@ -507,7 +506,7 @@ export function AdminSection({
                               </span>
                             )}
                           </p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <p className="text-sm text-muted-foreground">{user.phone}</p>
                         </div>
                       </div>
                       {user.role !== "SUPER_ADMIN" && (
@@ -968,8 +967,8 @@ export function AdminSection({
                     <span className="font-medium">{currentUser?.name || "Super Admin"}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">Email</span>
-                    <span className="font-medium">{currentUser?.email || "admin@bankassawards.com"}</span>
+                    <span className="text-muted-foreground">Téléphone</span>
+                    <span className="font-medium">{currentUser?.phone || "Non disponible"}</span>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-muted-foreground">Rôle</span>

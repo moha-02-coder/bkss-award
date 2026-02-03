@@ -48,6 +48,15 @@ export function ProfileSection({
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  
+  // États pour la modification des informations
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState("")
+  const [editPhone, setEditPhone] = useState("")
+  const [editDomain, setEditDomain] = useState("")
+  const [editCity, setEditCity] = useState("")
+  const [profileMessage, setProfileMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   if (!currentUser) {
     return (
@@ -130,6 +139,76 @@ export function ProfileSection({
     }, 2000)
   }
 
+  const handleProfileUpdate = () => {
+    setProfileMessage(null)
+    setIsUpdating(true)
+
+    // Validation des champs
+    if (!editName.trim()) {
+      setProfileMessage({ type: "error", text: "Le nom est requis" })
+      setIsUpdating(false)
+      return
+    }
+
+    if (!editPhone.trim()) {
+      setProfileMessage({ type: "error", text: "Le numéro de téléphone est requis" })
+      setIsUpdating(false)
+      return
+    }
+
+    // Validation du format du téléphone
+    const phoneRegex = /^(\+223|223)?0?[67]\d{7}$/
+    if (!phoneRegex.test(editPhone.replace(/\s/g, ''))) {
+      setProfileMessage({ type: "error", text: "Format de numéro de téléphone invalide" })
+      setIsUpdating(false)
+      return
+    }
+
+    // Vérifier si le téléphone est déjà utilisé par un autre utilisateur
+    const phoneExists = users.some(u => u.id !== currentUser.id && u.phone === editPhone)
+    if (phoneExists) {
+      setProfileMessage({ type: "error", text: "Ce numéro de téléphone est déjà utilisé" })
+      setIsUpdating(false)
+      return
+    }
+
+    // Mettre à jour l'utilisateur
+    const updatedUsers = users.map((u) => 
+      u.id === currentUser.id 
+        ? { 
+            ...u, 
+            name: editName.trim(), 
+            phone: editPhone.trim(),
+            domain: editDomain.trim(),
+            city: editCity.trim()
+          } 
+        : u
+    )
+    setUsers(updatedUsers)
+
+    setProfileMessage({ type: "success", text: "Profil mis à jour avec succès" })
+    setIsEditing(false)
+    setIsUpdating(false)
+
+    setTimeout(() => {
+      setProfileMessage(null)
+    }, 3000)
+  }
+
+  const startEditing = () => {
+    setEditName(currentUser.name || "")
+    setEditPhone(currentUser.phone || "")
+    setEditDomain(currentUser.domain || "")
+    setEditCity(currentUser.city || "")
+    setIsEditing(true)
+    setProfileMessage(null)
+  }
+
+  const cancelEditing = () => {
+    setIsEditing(false)
+    setProfileMessage(null)
+  }
+
   return (
     <section className="py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -165,21 +244,108 @@ export function ProfileSection({
                     <span className="text-sm bg-amber-500/10 text-amber-500 px-2 py-1 rounded-full">Super Admin</span>
                   )}
                 </h1>
-                <p className="text-muted-foreground">{currentUser.email}</p>
+                <p className="text-muted-foreground">{currentUser.phone}</p>
               </div>
-              {!isSuperAdmin && (
-                <div className="flex gap-3">
-                  <div className="text-center px-4 py-2 rounded-xl bg-primary/10">
-                    <div className="text-xl font-bold text-primary">{votedCategories}</div>
-                    <div className="text-xs text-muted-foreground">Votes</div>
+              <div className="flex gap-3">
+                {!isSuperAdmin && (
+                  <>
+                    <div className="text-center px-4 py-2 rounded-xl bg-primary/10">
+                      <div className="text-xl font-bold text-primary">{votedCategories}</div>
+                      <div className="text-xs text-muted-foreground">Votes</div>
+                    </div>
+                    <div className="text-center px-4 py-2 rounded-xl bg-muted">
+                      <div className="text-xl font-bold">{totalCategories - votedCategories}</div>
+                      <div className="text-xs text-muted-foreground">Restants</div>
+                    </div>
+                  </>
+                )}
+                <Button
+                  onClick={isEditing ? cancelEditing : startEditing}
+                  variant={isEditing ? "outline" : "default"}
+                  size="sm"
+                >
+                  {isEditing ? "Annuler" : "Modifier le profil"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Profile Update Form */}
+            {isEditing && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-8 p-6 rounded-xl border border-border/50 bg-muted/30"
+              >
+                <h3 className="text-lg font-semibold mb-4">Modifier mes informations</h3>
+                
+                <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor="editName">Nom complet</Label>
+                    <Input
+                      id="editName"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Votre nom complet"
+                    />
                   </div>
-                  <div className="text-center px-4 py-2 rounded-xl bg-muted">
-                    <div className="text-xl font-bold">{totalCategories - votedCategories}</div>
-                    <div className="text-xs text-muted-foreground">Restants</div>
+                  <div>
+                    <Label htmlFor="editPhone">Numéro de téléphone</Label>
+                    <Input
+                      id="editPhone"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="+223 XX XX XX XX"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editDomain">Domaine</Label>
+                    <Input
+                      id="editDomain"
+                      value={editDomain}
+                      onChange={(e) => setEditDomain(e.target.value)}
+                      placeholder="Votre domaine d'activité"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editCity">Ville</Label>
+                    <Input
+                      id="editCity"
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                      placeholder="Votre ville"
+                    />
                   </div>
                 </div>
-              )}
-            </div>
+
+                {profileMessage && (
+                  <div className={`mb-4 p-3 rounded-lg text-sm ${
+                    profileMessage.type === "success" 
+                      ? "bg-green-100 text-green-700 border border-green-200" 
+                      : "bg-red-100 text-red-700 border border-red-200"
+                  }`}>
+                    {profileMessage.text}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleProfileUpdate}
+                    disabled={isUpdating}
+                    className="flex-1"
+                  >
+                    {isUpdating ? "Mise à jour..." : "Enregistrer les modifications"}
+                  </Button>
+                  <Button
+                    onClick={cancelEditing}
+                    variant="outline"
+                    disabled={isUpdating}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              </motion.div>
+            )}
 
             {/* Details */}
             <div className="grid sm:grid-cols-2 gap-4 mb-8">

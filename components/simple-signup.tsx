@@ -205,24 +205,9 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
         }, 2000)
       } else {
         const error = await response.json()
-        // Messages d'erreur clairs en français
-        let errorMessage = "Une erreur est survenue lors de l'inscription"
-        
-        if (error.error) {
-          if (error.error.includes('téléphone est déjà utilisé')) {
-            errorMessage = "❌ Ce numéro de téléphone est déjà enregistré. Veuillez vous connecter."
-          } else if (error.error.includes('email est requise')) {
-            errorMessage = "⚠️ Erreur technique: Veuillez réessayer ou contacter l'administrateur."
-          } else if (error.error.includes('null value in column')) {
-            errorMessage = "⚠️ Erreur de base de données. L'équipe technique a été notifiée."
-          } else {
-            errorMessage = `❌ ${error.error}`
-          }
-        }
-        
         setMessage({
           type: "error",
-          text: errorMessage
+          text: error.error || "Erreur lors de la création du compte"
         })
       }
     } catch (error) {
@@ -282,24 +267,9 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
         }, 2000)
       } else {
         const error = await response.json()
-        // Messages d'erreur clairs en français
-        let errorMessage = "Une erreur est survenue lors de l'inscription"
-        
-        if (error.error) {
-          if (error.error.includes('téléphone est déjà utilisé')) {
-            errorMessage = "❌ Ce numéro de téléphone est déjà enregistré. Veuillez vous connecter."
-          } else if (error.error.includes('email est requise')) {
-            errorMessage = "⚠️ Erreur technique: Veuillez réessayer ou contacter l'administrateur."
-          } else if (error.error.includes('null value in column')) {
-            errorMessage = "⚠️ Erreur de base de données. L'équipe technique a été notifiée."
-          } else {
-            errorMessage = `❌ ${error.error}`
-          }
-        }
-        
         setMessage({
           type: "error",
-          text: errorMessage
+          text: error.error || "Erreur lors de la création du compte"
         })
       }
     } catch (error) {

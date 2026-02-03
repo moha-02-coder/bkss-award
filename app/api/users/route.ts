@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!name || !phone) {
-      return NextResponse.json({ error: 'Nom et téléphone requis' }, { status: 400 })
+      return NextResponse.json({ error: 'Nom et numéro de téléphone requis' }, { status: 400 })
     }
 
     // Vérifier si le téléphone existe déjà
@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
       .from('users')
       .insert({
         name,
-        email: `${phone.replace(/\D/g, '')}@bankass-awards.local`, // Email par défaut pour la contrainte NOT NULL
         password: hashedPassword,
         role,
         domain,
@@ -64,17 +63,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      // Message d'erreur clair en français
-      if (error.message?.includes('null value in column "email"')) {
-        return NextResponse.json({ 
-          error: "Erreur: L'adresse email est requise. Veuillez contacter l'administrateur." 
-        }, { status: 400 })
-      }
-      if (error.message?.includes('already exists')) {
-        return NextResponse.json({ 
-          error: "Ce numéro de téléphone est déjà utilisé. Veuillez vous connecter." 
-        }, { status: 400 })
-      }
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
