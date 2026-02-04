@@ -100,116 +100,42 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
     try {
       const identifierType = detectIdentifierType(formData.identifier)
       
-      // CONNEXION PAR EMAIL/MOT DE PASSE
-      // Si l'email existe dans la base, vérifier le mot de passe
-      let userFound: User | null = null
+      // CONNEXION DIRECTE PAR EMAIL OU TÉLÉPHONE
+      // Appeler directement l'API de connexion
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          [identifierType === 'email' ? 'email' : 'phone']: formData.identifier,
+          password: formData.password
+        })
+      })
       
-      if (identifierType === 'email') {
-        // Rechercher par email
-        const response = await fetch('/api/users')
-        const users = await response.json()
-        userFound = users.find((user: any) => 
-          user.email && user.email.toLowerCase() === formData.identifier.toLowerCase()
-        ) || null
-      } else {
-        // Pour le téléphone, utiliser l'API de connexion normale
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            phone: formData.identifier,
-            password: formData.password
-          })
+      if (response.ok) {
+        const data = await response.json()
+        const user = data.user || data
+        
+        // Enregistrer la connexion pour la sécurité
+        recordUserConnection(user, getClientIP(), navigator.userAgent)
+        
+        // Stocker la session
+        localStorage.setItem('user', JSON.stringify(user))
+        localStorage.setItem('loginTime', Date.now().toString())
+        
+        setMessage({
+          type: "success",
+          text: `Connexion réussie ! Bienvenue ${user.name}`
         })
         
-        if (response.ok) {
-          const data = await response.json()
-          const user = data.user || data
-          
-          // Enregistrer la connexion pour la sécurité
-          recordUserConnection(user, getClientIP(), navigator.userAgent)
-          
-          // Stocker la session
-          localStorage.setItem('user', JSON.stringify(user))
-          localStorage.setItem('loginTime', Date.now().toString())
-          
-          setMessage({
-            type: "success",
-            text: "Connexion réussie ! Redirection en cours..."
-          })
-          
-          setAttempts(0)
-          
-          setTimeout(() => {
-            onSuccess(user)
-          }, 1500)
-          
-          return
-        }
-      }
-      
-      if (userFound) {
-        // UTILISATEUR TROUVÉ - Vérifier le mot de passe
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: userFound.email,
-            password: formData.password
-          })
-        })
+        setAttempts(0)
         
-        if (response.ok) {
-          const data = await response.json()
-          const user = data.user || userFound
-          
-          // Enregistrer la connexion pour la sécurité
-          recordUserConnection(user, getClientIP(), navigator.userAgent)
-          
-          // Stocker la session
-          localStorage.setItem('user', JSON.stringify(user))
-          localStorage.setItem('loginTime', Date.now().toString())
-          
-          setMessage({
-            type: "success",
-            text: `Connexion réussie ! Bienvenue ${user.name}`
-          })
-          
-          setAttempts(0)
-          
-          setTimeout(() => {
-            onSuccess(user)
-          }, 1500)
-          
-        } else {
-          // Incrémenter les tentatives (limité à 2)
-          const newAttempts = attempts + 1
-          setAttempts(newAttempts)
-          
-          // Bloquer après 2 tentatives échouées
-          if (newAttempts >= 2) {
-            setIsBlocked(true)
-            setBlockTimeLeft(30) // 30 secondes
-            startBlockCountdown()
-            
-            setMessage({
-              type: "error",
-              text: "Trop de tentatives échouées. Compte bloqué pendant 30 secondes."
-            })
-          } else {
-            setMessage({
-              type: "error",
-              text: "Mot de passe incorrect. Veuillez réessayer."
-            })
-          }
-        }
+        setTimeout(() => {
+          onSuccess(user)
+        }, 1500)
         
       } else {
-        // UTILISATEUR NON TROUVÉ
         // Incrémenter les tentatives (limité à 2)
         const newAttempts = attempts + 1
         setAttempts(newAttempts)
@@ -222,16 +148,15 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
           
           setMessage({
             type: "error",
-            text: "Trop de tentatives incorrectes. Compte bloqué pour 5 minutes."
+            text: "Trop de tentatives échouées. Compte bloqué pendant 30 secondes."
           })
         } else {
+          const error = await response.json()
           setMessage({
             type: "error",
-            text: "Identifiant ou mot de passe incorrect."
+            text: error.error || "Mot de passe incorrect. Veuillez réessayer."
           })
         }
-        
-        setAttempts(prev => prev + 1)
       }
     } catch (error) {
       // Incrémenter le compteur d'erreurs même en cas d'erreur technique
