@@ -62,6 +62,16 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
         return
       }
 
+      // Valider la longueur du mot de passe
+      if (formData.password.length < 4) {
+        setMessage({
+          type: "error",
+          text: "Le mot de passe doit contenir au moins 4 caractères"
+        })
+        setIsSubmitting(false)
+        return
+      }
+
       // Valider le format de l'email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(formData.email)) {
@@ -201,10 +211,10 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
                 type="password"
                 value={formData.password}
                 onChange={(e) => handleInputChange("password", e.target.value)}
-                placeholder="Choisissez un mot de passe"
+                placeholder="Choisissez un mot de passe (4 caractères minimum)"
                 className="pl-11 h-12"
                 required
-                minLength={6}
+                minLength={4}
               />
             </div>
           </div>
